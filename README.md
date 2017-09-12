@@ -1,1 +1,266 @@
 # Demonetisation-Sentiment-Analysis
+
+---
+title: "Demonetization Sentiment Analysis: Event Study using Twitter Data"
+author: "Parth Khare"
+date: "9/10/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=FALSE, results='hide'}
+# knitr::opts_chunk$set(cache = TRUE)
+# knitr::opts_chunk$set(dev = 'pdf')
+knitr::opts_chunk$set(out.width='900px', dpi=100, echo = T) # Chaneg
+
+library(twitteR)
+library(ROAuth)
+library(RCurl)
+library(base64enc)      
+library(wordcloud)
+library(httr)
+library(devtools)
+library(ggplot2)
+library(tm)
+library(extrafont)
+library(dplyr)
+library(lubridate)
+library(scales)
+loadfonts(quiet = T)
+source("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/SentiScr_basic.R")
+```
+
+### Wordcloud: Based on 1.7 lakhs tweets 
+```{r , echo =F, message=FALSE}
+# Load Prepared Corpus
+load("/Users/parthkhare/Desktop/TwitterSurvey/Demonetisation/Event/TwFin10sep/Corp.DemMt_10sep.RData")
+col <- c("black","red","forestgreen","blue","deeppink2","magenta",
+          "orange","gray40", "cyan2")
+wordcloud(crp, max.words = 100,min.freq = 30,scale = c(1.5,1),
+           random.order = FALSE,rot.per = 0.5,vfont = c("sans serif","plain"),
+           colors = col,random.color = TRUE)
+```
+
+### Demonetization: Post Press Release of RBI's Annual Account  
+The Government of India decided to cancel the Legal Tender Status of Rs.1000 and Rs.500 denomination currency notes on 8th November 2016.
+On 30th August, 2017, <http://pib.nic.in/newsite/PrintRelease.aspx?relid=170378> Reserve Bank of India (RBI) has reported in their Annual Accounts that Specified Bank Notes (SBNs) of estimated value of Rs. 15.28 lakh crore have been deposited back.
+Demonetization was envisaged with the broad objectives of: (i) flushing out black money, (ii) eliminate Fake Indian Currency Notes (FICN), (iii) to convert non-formal economy into a formal economy to expand tax base and employment and (iv) to give a big boost to digitalization of payments to make India a less cash economy. The cost of this experiment was loss of jobs (undocumented) largely in the informal labor sector, in addition to more than 100 deaths.
+The following exercise however, presents an analytic account of the behavioural response on demonetization from 3 lakh tweets.
+The first segment focuses on the context, methodology and results of the sentiment analysis. The latter section includes comprehensive R codes used for the analysis.
+
+
+### Twitter Feed: Data
+3 lakhs tweets have been extracted by using 'twitteR' package.
+After cleaning for non-englih, emoji's and repeated (retweeted) tweets, the text analysis is conducted on 1.7 lakhs tweets. In one go, one can extract tweets from a limited window of 8-10 days. I have therefore, collected tweets on four different days and have stitched together to arrive at a clean before and after sample. The 1.7 lakh tweets represent more than 55 thousand users.
+
+
+### Sentiment Analysis: Methodology
+All the tweets are first text steralised, by removing emoticons, stopwords, unnecessary special characters (except for !) and spaces. The words in the tweets are then scored on the basis of negative and postive words in the tweet. 
+```{r , echo =T, message =  F}
+source("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/SentiScr_basic.R")
+# Read Lexicon of all positive and negative words
+# ---------------
+pos.words <- read.csv("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/Positive Words.csv")
+neg.words <- read.csv("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/Negative Words.csv")
+# Scan the words into R
+# ---------------
+pos.words <- scan("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/Positive Words.csv",
+                  what = 'character')
+neg.words <- scan("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/Negative Words.csv",
+                  what = 'character')
+# Add +/- words Manually to the list
+# ---------------
+pos.words = c(pos.words, 'new','nice' ,'good', 'horizon')
+neg.words = c(neg.words, 'wtf', 'behind','feels', 'ugly', 'back','worse' , 'shitty', 'bad', 'no','freaking','sucks','horrible')
+
+# Practical Working of Sentiment Function: Sampled from the tweets 
+# ---------------
+# Instance of a Postive Tweet
+tx1 <- "Frightening statistics Modi made disaster Demonetisation taking its toll on Indias economy"
+scr.snt(tx1,pos.words,neg.words)
+
+# Instance of a Negative Tweet
+tx2 <- "Due to Demonetisation 56 lakh new tax payers have been added indicates better compliance and better tax revenues"
+scr.snt(tx2,pos.words,neg.words)
+
+# Limitation: Sarcasm 
+# tx3 <- "I hav sufferd 4 Lac loss in shares due to Demonetisation But Still IAmWithModi amp WILL deposit100 Rs notes in bnk as it"
+# scr.snt(tx2,pos.words,neg.words)
+```
+
+
+
+### Sentiment Wave: Feedback over Time
+```{r, echo= T, message = F}
+# Load Processed Sentiments using scr.snt function tailor-specified in R
+load("/Users/parthkhare/Desktop/TwitterSurvey/Demonetisation/Event/TwFin10sep/SntMan_10sep.RData")
+# Load Processed Sentiments merged back in the main twitter data R
+load("/Users/parthkhare/Desktop/TwitterSurvey/Demonetisation/Event/TwFin10sep/Wv.twday_10sep.RData")
+
+# Sentiment Wave: All Tweets from 29th August to 9th September, 2017
+# --------------------
+gd <- ggplot(twday, aes(date, number))
+gd <- gd + geom_line(aes(group=sentiment, color=sentiment), size=1)
+gd <- gd + geom_point(aes(group=sentiment, color=sentiment), size=4) 
+gd <- gd + theme(text = element_text(size=10), 
+                 axis.text.x = element_text(angle=90, vjust=1)) 
+gd <- gd + ggtitle(paste0("Sentiment Wave by Time"))
+gd <- gd + scale_x_datetime(labels = date_format("%d-%b-%y", tz = "Asia/Kolkata"),
+                             breaks = date_breaks("1 day"))
+gd <- gd + xlab("Tweet Time") + ylab("Frequency")
+gd <- gd + theme(plot.title = element_text(hjust = 0.5))
+gd <- gd + labs(fill = "Sentiment")
+gd
+```
+
+
+### Event Study for a specified period: 30th August to 2nd September, 2017
+```{r, echo= T, message = F}
+# Load Processed Sentiments using scr.snt function tailor-specified in R
+load("/Users/parthkhare/Desktop/TwitterSurvey/Demonetisation/Event/TwFin10sep/SntMan_10sep.RData")
+# Load Processed Sentiments merged back in the main twitter data R
+load("/Users/parthkhare/Desktop/TwitterSurvey/Demonetisation/Event/TwFin10sep/Wv.twday_10sep.RData")
+# Add Events to Plot: Event [GDP Announced]
+gdp <- as.POSIXct("2017-08-31 17:30:00", tz = "Asia/Kolkata")
+gd1 <- gd + geom_vline(aes(xintercept = as.numeric(gdp)),
+                        linetype=5,color = "aquamarine4")
+gd1 <- gd1 + geom_text(aes(label = "GDP QII release {5.7%}"), 
+              x = as.numeric(gdp),
+              y=5000, vjust = 1, hjust = -0.07, colour = "red")
+# Add Events to Plot: Event [Demonetization Numbers Released]
+drel <- as.POSIXct("2017-08-30 17:30:00", tz = "Asia/Kolkata") 
+gd2 <- gd1 + geom_vline(aes(xintercept = as.numeric(drel)),
+                        linetype=5,color = "aquamarine4")
+gd2 <- gd2 + geom_text(aes(label = "RBI ann a/c press release"), 
+                       x = as.numeric(drel),
+                       y=6000, vjust = 1, hjust = -0.05, colour = "darkgreen")
+# gd2
+gdt <- gd2
+
+# Event Window: 30th August, 2017 - 3rd September, 2017
+# --------------------
+lims <- as.POSIXct(strptime(c("2017-08-30 08:00","2017-09-02 20:00"), 
+                            format = "%Y-%m-%d %H:%M"))    
+gdf <- gdt + scale_x_datetime(labels = date_format("%d-%b-%y %H:%M", tz = "Asia/Kolkata"),
+                             limits = lims,
+                             breaks = date_breaks("4 hour"))
+gdf
+```
+
+### Spectrum of Sentiment Response on Demonetization
+```{r, echo= T, message = F}
+# Load Processed Sentiments using scr.snt function tailor-specified in R
+load("/Users/parthkhare/Desktop/TwitterSurvey/Demonetisation/Event/TwFin10sep/SntMan_10sep.RData")
+# Load Processed Sentiments merged back in the main twitter data R
+load("/Users/parthkhare/Desktop/TwitterSurvey/Demonetisation/Event/TwFin10sep/Wv.twday_10sep.RData")
+# Aggregate Sentiments
+# ---------------
+g4 <- ggplot(res, aes(x = factor(score), fill = sn))
+g4 <- g4 + geom_bar(stats = "identity")
+g4 <- g4 + ggtitle("Demonetization Sentiment: Frequency Count") 
+g4 <- g4 + xlab("Sentiment Spectrum") + ylab("Frequency")
+g4 <- g4 + theme(plot.title = element_text(hjust = 0.5))
+g4 <- g4 + labs(fill = "Sentiment")
+g4
+```
+
+
+### Setting-up Twitter connection: ROuth Authentication
+R can extract tweets by setting up a connection Twitter his function wraps the OAuth authentication handshake functions from the httr package for a twitteR session. Details for the process are: <https://www.rdocumentation.org/packages/twitteR/versions/1.1.9/topics/setup_twitter_oauth>
+The code here currently uses Authentication Credentials from a pre- established connection (to save processing time)
+```
+pt <- "/Users/parthkhare/Desktop/TwitterSurvey"
+load(paste0(pt,"/twit_cred.RData"))
+setup_twitter_oauth(consumerKey, consumerSecret, access_token, access_token_secret)
+
+# Extract Tweets from Twitter
+dem <- searchTwitter("#demonetisation", n = 85000)
+# Convert the Tweet List to Data Frame
+dm <- do.call("rbind", lapply(dem, as.data.frame))
+```
+
+### Text Cleaning and Corpus Generation: R Codes
+```
+load(file = "/Users/parthkhare/Desktop/TwitterSurvey/Demonetisation/Event/Dem85_2sep.RData")
+# Convert tweets to data frame
+# ---------------
+dm <- dm1
+dm$tx <- dm$text
+
+# Text Transformations
+# ---------------
+# Remove Re-Tweets
+dm$tx <- gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", dm$tx)
+# Replace blank space (???rt???)
+dm$tx <- gsub("rt", "", dm$tx)
+# Replace @UserName
+dm$tx <- gsub("@\\w+", "", dm$tx)
+# Remove punctuation
+dm$tx <- gsub("[[:punct:]]", "", dm$tx)
+# Remove links
+dm$tx <- gsub("http\\w+", "", dm$tx)
+# Remove Special Characters
+dm$tx <- gsub("[^a-zA-Z0-9 ]","",dm$tx)
+# Remove blank spaces at the beginning
+dm$tx <- gsub("^ ", "", dm$tx)
+# Remove blank spaces at the end
+dm$tx <- gsub(" $", "", dm$tx)
+# Remove tabs
+dm$tx <- gsub("[ |\t]{2,}", "", dm$tx)
+
+# Corpus Generation
+# ---------------
+crp <- Corpus(VectorSource(dm$tx))
+
+# Strelaization
+# ---------------
+# strip white space
+crp <- tm_map(crp, stripWhitespace)
+# convert all characters to lower case
+crp <- tm_map(crp, tolower, lazy = T)
+
+# Include 'stop words' to the standard ones
+# ---------------
+twev.stp <- c(stopwords('english'), "amp", "can","say","came","http","per")
+# remove stop words
+crp <- tm_map(crp, removeWords, twev.stp)
+
+# Sample analysis of working of the function
+# ---------------
+load(file = "/Users/parthkhare/Desktop/TwitterSurvey/Demonetisation/Event/Dem85.prsd_2sep.RData")
+#load(file="/Users/parthkhare/Desktop/TwitterSurvey/Demonetisation/Event/SntMan.Dem85_2sep.RData")
+# Load the Sentiment Score Function
+
+# Read Lexicon of all positive and negative words
+# ---------------
+pos.words <- read.csv("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/pve.csv")
+neg.words <- read.csv("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/nve.csv")
+
+# Scan the words into R
+# ---------------
+pos.words <- scan("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/pve.csv",
+                  what = 'character')
+neg.words <- scan("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/nve.csv",
+                  what = 'character')
+
+# Add +/- words Manually to the list
+# ---------------
+pos.words = c(pos.words, 'new','nice' ,'good', 'horizon')
+neg.words = c(neg.words, 'wtf', 'behind','feels', 'ugly', 'back','worse' , 'shitty', 'bad', 'no','freaking','sucks','horrible')
+
+# Source function for Sentiment Extraction
+source("/Users/parthkhare/Desktop/TwitterSurvey/Lexicon/SentiScr_basic.R")
+
+# Sentiment Analysis according to the package
+# ---------------
+system.time(res <- scr.snt(dm$tx,pos.words,neg.words))
+res$sn <- ifelse(res$score > 0, "Positive","Negative")
+res$sn <- ifelse(res$score == 0, "Neutral",res$sn)
+
+# Apply sentiment Function to the tweets
+# ---------------
+system.time(res <- scr.snt(dm$tx,pos.words,neg.words))
+
+# With due acknowledgement to Stefan Feuerriegel, Nicolas Proellochs.
+Have added 25% + colloquial more vocabulary to the lexicon
+```
+
