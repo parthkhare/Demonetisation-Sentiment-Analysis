@@ -1,13 +1,3 @@
-# Demonetisation-Sentiment-Analysis
-
----
-title: "Demonetization Sentiment Analysis: a"
-link: 
-
-author: "Parth Khare"
-
----
-
 # Demonetization Sentiment Analysis
 AEvent Study using Twitter Data
 
