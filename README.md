@@ -12,4 +12,5 @@ Sentiment Wave [Rpubs link](https://rpubs.com/parthakhare/DemonitizationSetiment
 + The cost of this experiment was loss of jobs (undocumented) largely in the informal labor sector. 
 + The following exercise however, presents an analytic account of the behavioural response on demonetization from 3 lakh tweets. 
 + The first segment focuses on the context, methodology and results of the sentiment analysis. The latter section includes comprehensive R codes used for the analysis.
++ Codes and reference material are shared as a tutorial for using R for Sentiment Analysis
 
